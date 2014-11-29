@@ -3,65 +3,55 @@
 #include <stdlib.h>
 #include "types.h"
 
+#define PI 3.141592
 
-#define PI 3.141591
-
-float sphere(int size,Ant* swarm []){
-
-	float result;
-	int i;
-	result=0.0;
-	for(i=0;i<size-1;i++){
-		Ant* ant = swarm[i];
-		result+= ant->fitness * ant->fitness;
+float sphere(Ant* ant){
+	int i, coo;
+	float result = 0.0;
+	for(i = 0; i < MAXDIMENSION; i++){
+		coo = getCooDim(i, ant); 	
+		result += pow((float)coo, 2.0);
 	}
 	return result;
 }
 
-float schwefel(int size,Ant* swarm[]){
-	float result=0.0;
-	int i;
-	for(i=0;i<size;i++){
-		Ant* ant = swarm[i];
-		result+= ant->fitness*sin(sqrt(ant->fitness));
+float rosenbrock(Ant* ant){
+	int i, coo;
+	float result = 0.0;
+	for(i = 0; i < MAXDIMENSION - 1; i++){	
+		coo = getCooDim(i, ant); 	
+		result += 100 * ( getCooDim(i + 1, ant) - pow((float)coo, 2.0)) + pow((float)(coo - 1), 2.0);
 	}
-	return -result;
+	return result;
 }
 
-float griewank(int size, Ant* swarm[]){
-	int i;
-	float result_s=0.0;
-	float result_p=1.0;
-	for(i=0;i<size;i++){
-		Ant* ant = swarm[i];
-		result_s+= ant->fitness*ant->fitness;
-		result_p+= cos(ant->fitness/sqrt(i+1));
+float schwefel(Ant* ant){
+	int i, coo;
+	float result = 418.9829 * MAXDIMENSION;
+	for(i = 0; i < MAXDIMENSION; i++){	
+		coo = getCooDim(i, ant); 	
+		result -= coo * sin(sqrt(abs(coo)));
 	}
-	result_s = result_s/4000.0 +result_p+1;
-	return result_s;
-
+	return result;
 }
 
-float rastrigrin (int size,Ant* swarm[]){
-	int i;
-	float result=0.0;
-	for(i=0;i<size;i++){
-		Ant* ant = swarm[i];
-		float x = ant->fitness;
-		result+=x*x - 10*cos(2*PI*x);
+float griewank(Ant* ant){
+	int i, coo;
+	float result = 0.0, resMult = 1.0;
+	for(i = 0; i < MAXDIMENSION; i++){	
+		coo = getCooDim(i, ant); 	
+		result += pow(coo, 2.0);
+		resMult *= cos((float)coo / sqrt(i + 1));
 	}
-	return 10+result;
+	result /= 4000;
+	return result - resMult + 1;	
 }
 
-float rosenbrock(int size, Ant* swarm[]){
-	int i;
-	float result=0.0;
-	for(i=0;i<size;i++){
-		Ant * ant = swarm[i];
-		float x = ant->fitness;
-		result+=100*(x+1-(x*x)) +(x+1)*(x+1);
-		result *=x;
+float rastrigin (Ant* ant){
+	int i, result = RASTRIGINCONS, coo;
+	for(i = 0; i < MAXDIMENSION; i++){	
+		coo = getCooDim(i, ant); 	
+		result += pow(coo, 2.0) - RASTRIGINCONS * cos(2 * PI * coo);
 	}
-
 	return result;
 }
