@@ -4,4 +4,4 @@ Particule Swarm Optimization
 - Carlos Reyna
 - Diego Monroy
 
-Compile with -pthread
+Compile with -pthread -lm

@@ -1,48 +1,61 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "stack.c"
-
-#define MAXLNEQ 200
-
-char* eq[MAXLNEQ];
-
-typedef struct point{
-	int x;
-	int y;
-} Point;
+#include <float.h>
+#include "functions.c"
+#include "Ant.c"
 
 typedef struct thread_data{
 	int id;
 	int numAnts;
 } TData;
 
-float parseFunction(char* eq);
+
+void initSwarm(Ant swarm[],int swarmSize);
+
 
 void* startPSO(void* tData){
 
 }
 
-int main(void){
+int main(int argc, char *argv[]){
+
+	if(argc<=1){
+		printf("Ejecución erronea\n");		
+		printf("Uso: ./pso 1\n");
+		printf("***Funciones***\n");
+		puts("1.- Sphere");
+		puts("2.- Rosenbrock");
+		puts("3.- Schwefel");
+		puts("4.- Griewank");
+		puts("5.- Rastrigin");
+		exit(-1);
+	}
+	int i=0;
 	
-	int i, rc, numberOfAnts, rangeX, rangeY, numThreads, tmpNumOfAnts;
+	int choice = atoi(argv[1]);	
+
+	int rc, numberOfAnts, dimension, numThreads, tmpNumOfAnts;
 	
-	Point* start = (Point*)malloc(sizeof(Point));
+	// Point* start = (Point*)malloc(sizeof(Point));
 	
 	printf("Cuantas hormigas quieres tener?\n");
 	scanf("%d", &numberOfAnts);
-	printf("Dame la coordenada en x de tu punto incial de tu mapa: ");
+	printf("Dimensión del espacio?");
+	scanf("%d",&dimension);
+	/*printf("Dame la coordenada en x de tu punto incial de tu mapa: ");
 	scanf("%d", &(start->x));
 	printf("Dame la coordenada en y de tu punto inicial de tu mapa: ");
-	scanf("%d", &(start->y));
-	printf("Cual es tu rango en x? ");
-	scanf("%d" , &rangeX);
-	printf("Cual es tu rango en y? ");
-	scanf("%d", &rangeY);
-	printf("Que ecuacion quieres utilizar?");
-	scanf("%s", eq);
-	printf("%s\n", &eq);
-	printf("El resultado de la operación es: %f\n",parseFunction(*eq));
+	scanf("%d", &(start->y));*/
+	
+	
+	Ant swarm [numberOfAnts];
+	int ** space = (int**)malloc(sizeof(int));
+	initSwarm(swarm,numberOfAnts);
+	
+	/*double [dimension] bestGlobalPosition;
+	double [DBL_MAX] bestGlobalValue;*/
+
 	
 	tmpNumOfAnts = numberOfAnts / 10;
 	numThreads = tmpNumOfAnts + 1;
@@ -72,6 +85,17 @@ int main(void){
 	return 0;
 }
 
-float parseFunction(char* eq){
+
+void initSwarm(Ant swarm[],int swarmSize){
+//initAnt(Point * position,double fitness,Point* velocity, Point* bestPosition, double bestFitness){
+	int i,j,k;
+	for(i=0;i<swarmSize-1;i++){
+		Point* position = (Point*)malloc(sizeof(Point));
+		position -> x = 0;
+		position -> y = 0;
+		Ant* ant = initAnt(position,0,position,position,0);
+		printf("Position x %d y %d\n",ant->position->x,ant->position->y);
+	}
+
 
 }
