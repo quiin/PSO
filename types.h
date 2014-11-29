@@ -6,14 +6,27 @@ typedef struct point{
 	int y;
 } Point;
 
-typedef struct ant{
-	
-	Point * position;
-	float fitness;
-	Point * velocity;
-	Point * bestPosition;
-	float bestFitness;	
+typedef struct thread_data{
+	int id;
+	int numAnts;
+	int function;
+	int mode;
+} TData;
 
+typedef struct bestGlobal{
+	Point* coos;
+	float value;
+} BestGlobal;
+
+typedef struct ant{	
+	Point* position;	
+	Point* velocity;
+	Point* bestPosition;
+	float bestLocal;	
+	float cons1X;
+	float cons2X;
+	float cons1Y;
+	float cons2Y;
 }Ant;
 
 
