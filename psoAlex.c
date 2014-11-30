@@ -112,6 +112,7 @@ float rastrigin (Ant* ant){
 
 
 float calFun(int fun, Ant* ant){
+	//printf("calFun\n");
 	switch(fun){
 		case 0: 		
 			return sphere(ant);
@@ -136,6 +137,8 @@ Ant* initAnt(int fun){
 		printf("Can't open /dev/urandom !!!\n");
 		exit(-1);
 	}	
+
+	//printf("hia\n");
 
 	Ant* ant = (Ant*)malloc(sizeof(Ant));
 
@@ -231,20 +234,17 @@ void moveAnt(Point* vel, Ant* ant, int fun, int mode){
 	float newLocal = calFun(fun, ant);	
 	minOrMax(ant, fun, mode);
 	if(ant->bestLocal - newLocal < bestG->value - newLocal){
-		if(ant->cons1X > MINCONSTANT){
-			ant->cons1X -= .1;
-			ant->cons1Y -= .1;
-		}		
+		ant->cons1X -= .1;
+		ant->cons1Y -= .1;
 	}else{
-		if(ant->cons2X > MINCONSTANT){
-			ant->cons2X -= .1;
-			ant->cons2Y -= .1;
-		}
+		ant->cons2X -= .1;
+		ant->cons2Y -= .1;
 	}
 }
 
 void findGlobalBest(Ant* ant, int mode){
-	if(mode = 0){
+	if(mode == 0){
+		//printf("%f  < %f\n", ant->bestLocal, bestG->value);
 		if(ant->bestLocal < bestG->value){
 			bestG->value = ant->bestLocal;
 			bestG->coos->x = ant->bestPosition->x;
@@ -257,6 +257,7 @@ void findGlobalBest(Ant* ant, int mode){
 			bestG->coos->y = ant->bestPosition->y;
 		}
 	}
+	//printf("%f\n", bestG->value);
 }
 
 void* startPSO(void* tData){
@@ -267,6 +268,9 @@ void* startPSO(void* tData){
 	int function = myData->function;
 	int mode = myData->mode;
 
+
+	//printf("%d\n", numAnts);
+	
 	Point* vel;
 
 	Ant* swarm[numAnts];
@@ -274,13 +278,13 @@ void* startPSO(void* tData){
 		printf("Thread %d created ant %d of %d\n", id, i + 1, numAnts);
 		swarm[i] = initAnt(function);
 	}	
-
 	
 
 	//THREAD HAS TO WAIT FOR OTHER THREADS CREATING THEIR ANTS
 	//WE NEED TO SELECT GLOBALBEST THEN
 	for(i = 0; i < numAnts; i++){
 		findGlobalBest(swarm[i], mode);
+		//printf("%f\n", bestG->value);
 	}
 
 	while(1){
@@ -290,6 +294,7 @@ void* startPSO(void* tData){
 	for( i = 0; i < MAXITERATIONS; i++){		
 		for(j = 0; j < numAnts; j++){
 			vel = calVelocity(swarm[j]);
+			printf("hia\n" );
 			moveAnt(vel, swarm[i], function, mode);
 		}
 		//THREAD HAS TO WAIT FOR OTHER THREADS MOVING THEIR ANTS
@@ -328,24 +333,30 @@ int main(void){
 	printf("Que modo quieres? (0 = min 1 = max)\n");
 	scanf("%d", &mode);
 		
-	tmpNumOfAnts = numberOfAnts / 10;	
-	numThreads = numberOfAnts % 10 == 0 ? tmpNumOfAnts : tmpNumOfAnts + 1;
+	tmpNumOfAnts = numberOfAnts % 10;	
+	numThreads = tmpNumOfAnts == 0 ? numberOfAnts / 10 : numberOfAnts / 10 + 1;
 	pthread_t threads[numThreads];
 	TData* tData;
 	
 	for(i = 0; i < numThreads; i++){
 		tData = (TData*)malloc(sizeof(TData));
 		tData->id = i;
-		tData->numAnts = numberOfAnts > tmpNumOfAnts ? tmpNumOfAnts : numberOfAnts;
+		tData->numAnts = numberOfAnts > tmpNumOfAnts ? 10 : tmpNumOfAnts;
+		//printf("%d\n", tData->numAnts);
 		tData->function = function - 1;
 		tData->mode = mode;
-		numberOfAnts -= tmpNumOfAnts;
+		printf("%d\n", mode);
+		numberOfAnts -= 10;
 		printf("Creating thread %d\n", i);
 		rc = pthread_create(&threads[i], NULL, startPSO, (void*)tData);
 		if(rc){
 			printf("Error creating thread %d pthread_create got %d\n", i, rc);
 			exit(-1);
 		}
+	}
+
+	while(1){
+		wait();
 	}
 
 	for(i = 0; i < numThreads; i++){
