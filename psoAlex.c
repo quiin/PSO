@@ -10,8 +10,8 @@
 #define MINCONSTANT 0.5
 #define MAXRANGEX 500
 #define MAXRANGEY 500
-#define MINRANGEX 500
-#define MINRANGEY 500
+#define MINRANGEX -500
+#define MINRANGEY -500
 
 
 ///......................mode = 0 is min ................ mode = 1 is max
@@ -136,9 +136,7 @@ Ant* initAnt(int fun){
 	if(urandom == NULL){
 		printf("Can't open /dev/urandom !!!\n");
 		exit(-1);
-	}	
-
-	//printf("hia\n");
+	}		
 
 	Ant* ant = (Ant*)malloc(sizeof(Ant));
 
@@ -192,7 +190,7 @@ Point* calVelocity(Ant* ant){
 	fread(&randomNum, sizeOfInt, 1, urandom);
 	globalPart = ant->cons2X * randomNum * (bestG->coos->x - ant->position->x);
 
-	vel->x = ant->velocity->x + localPart + globalPart;
+	vel->x = ant->velocity->x + (localPart + globalPart) * .1;
 
 	fread(&randomNum, sizeOfInt, 1, urandom);
 	localPart = ant->cons1Y * randomNum * (ant->bestPosition->y - ant->position->y);
@@ -200,7 +198,7 @@ Point* calVelocity(Ant* ant){
 	fread(&randomNum, sizeOfInt, 1, urandom);
 	globalPart = ant->cons2Y * randomNum * (bestG->coos->y - ant->position->y);
 
-	vel->y = ant->velocity->y + localPart + globalPart;
+	vel->y = ant->velocity->y + (localPart + globalPart) * .1;
 
 	close(urandom);
 
@@ -226,13 +224,19 @@ void minOrMax(Ant* ant, int fun, int mode){
 	}	
 }
 
-void moveAnt(Point* vel, Ant* ant, int fun, int mode){
-	if(ant->position->x + vel->x <= MAXRANGEX && ant->position->x + vel->x >= MINRANGEX)
+void moveAnt(Point* vel, Ant* ant, int fun, int mode){		
+
+	if(ant->position->x + vel->x <= MAXRANGEX && ant->position->x + vel->x >= MINRANGEX)		
 		ant->position->x += vel->x;
-	if(ant->position->y + vel->y <= MAXRANGEY && ant->position->y + vel->y >= MINRANGEY)
+		
+	if(ant->position->y + vel->y <= MAXRANGEY && ant->position->y + vel->y >= MINRANGEY)		
 		ant->position->y += vel->y;
-	float newLocal = calFun(fun, ant);	
+		
+
+	float newLocal = calFun(fun, ant);
+
 	minOrMax(ant, fun, mode);
+
 	if(ant->bestLocal - newLocal < bestG->value - newLocal){
 		ant->cons1X -= .1;
 		ant->cons1Y -= .1;
@@ -266,10 +270,7 @@ void* startPSO(void* tData){
 	int id = myData->id;
 	int numAnts = myData->numAnts;
 	int function = myData->function;
-	int mode = myData->mode;
-
-
-	//printf("%d\n", numAnts);
+	int mode = myData->mode;	
 	
 	Point* vel;
 
@@ -278,7 +279,8 @@ void* startPSO(void* tData){
 		printf("Thread %d created ant %d of %d\n", id, i + 1, numAnts);
 		swarm[i] = initAnt(function);
 	}	
-	
+
+
 
 	//THREAD HAS TO WAIT FOR OTHER THREADS CREATING THEIR ANTS
 	//WE NEED TO SELECT GLOBALBEST THEN
@@ -287,23 +289,24 @@ void* startPSO(void* tData){
 		//printf("%f\n", bestG->value);
 	}
 
-	while(1){
-		sleep(1);
-	}
+	// while(1){
+	// 	sleep(1);
+	// }
 
-	for( i = 0; i < MAXITERATIONS; i++){		
+	for(i = 0; i < MAXITERATIONS; i++){		
 		for(j = 0; j < numAnts; j++){
-			vel = calVelocity(swarm[j]);
-			printf("hia\n" );
-			moveAnt(vel, swarm[i], function, mode);
-		}
+			printf("wut\n");
+			vel = calVelocity(swarm[j]);	
+			moveAnt(vel, swarm[i], function, mode);			
+		}		
+
 		//THREAD HAS TO WAIT FOR OTHER THREADS MOVING THEIR ANTS
 		//WE NEED TO SELECT GLOBALBEST
-		for(i = 0; i < numAnts; i++){
-			findGlobalBest(swarm[i], mode);
-		}
+		for(j = 0; j < numAnts; j++){
+			findGlobalBest(swarm[j], mode);
+		}		
 	}
-
+	printf("finish\n");
 }
 
 
@@ -345,7 +348,7 @@ int main(void){
 		//printf("%d\n", tData->numAnts);
 		tData->function = function - 1;
 		tData->mode = mode;
-		printf("%d\n", mode);
+		//printf("%d\n", mode);
 		numberOfAnts -= 10;
 		printf("Creating thread %d\n", i);
 		rc = pthread_create(&threads[i], NULL, startPSO, (void*)tData);
