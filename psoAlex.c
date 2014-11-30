@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #define MAXDIMENSION 2
 #define RASTRIGINCONS 10
@@ -17,6 +18,9 @@
 ///......................mode = 0 is min ................ mode = 1 is max
 pthread_t* threads;
 int sizeOfInt = sizeof(int);
+int numThreads,antsCreated =0,antsTotal;
+pthread_mutex_t creation_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t condition_var = PTHREAD_COND_INITIALIZER;
 
 FILE* urandom;
 
@@ -243,9 +247,9 @@ void moveAnt(Point* vel, Ant** antP, int fun, int mode){
 	Ant* ant = *antP;
 
 	if(ant->position->x + vel->x <= MAXRANGEX && ant->position->x + vel->x >= MINRANGEX)		
-		printf("LAST %d + %d\n", ant->position->x, vel->x);
+		// printf("LAST %d + %d\n", ant->position->x, vel->x);
 		ant->position->x += vel->x;
-		printf("NEW %d\n", ant->position->x);
+		// printf("NEW %d\n", ant->position->x);
 		
 	if(ant->position->y + vel->y <= MAXRANGEY && ant->position->y + vel->y >= MINRANGEY)		
 		//printf("%d + %d\n", ant->position->y, vel->y);
@@ -296,16 +300,32 @@ void* startPSO(void* tData){
 	
 	Point* vel;
 
-	Ant* swarm[numAnts];
 	//init swarm with ants
-	for(i = 0; i < numAnts; i++){
-		printf("Thread %d created ant %d of %d\n", id, i + 1, numAnts);
-		swarm[i] = initAnt(function);
-	}	
+	Ant* swarm[numAnts];
 
+	for(i = 0; i < numAnts; i++){
+		// printf("Thread %d created ant %d of %d\n", id, i + 1, numAnts);
+		swarm[i] = initAnt(function);
+		antsCreated++;
+	}		
 
 	//THREAD HAS TO WAIT FOR OTHER THREADS CREATING THEIR ANTS
 	//WE NEED TO SELECT GLOBALBEST THEN
+	//wait until all ants are created
+	while(antsCreated<antsTotal){
+		printf("Thread %d is waiting. Current ants: %d/%d\n", myData->id,antsCreated,antsTotal);
+		pthread_cond_wait(&condition_var,&creation_mutex);
+	}
+	if(antsCreated>=antsTotal-1){
+		printf("%d All ants created!\n",myData->id);
+		pthread_cond_broadcast(&condition_var);
+	}
+	pthread_mutex_unlock(&creation_mutex);
+	/*printf("All ants created!\n");
+	pthread_mutex_lock(&creation_mutex);	
+	pthread_cond_signal(&condition_var);
+	pthread_mutex_unlock(&creation_mutex);*/
+
 	for(i = 0; i < numAnts; i++){
 		// printf("Global was : %d at point (%d,%d)\n", bestG->value,bestG->coos->x,bestG->coos->y);
 		findGlobalBest(swarm[i], mode);
@@ -333,11 +353,10 @@ void* startPSO(void* tData){
 		for(j = 0; j < numAnts; j++){
 			findGlobalBest(swarm[j], mode);
 		}		
-	}
-	printf("finish\n");
+	}	
 }
 
-void createThreads(int numThreads,int numberOfAnts,int tmpNumOfAnts, int function,int mode){
+void createThreads(int numThreads,int antsTotal,int tmpNumOfAnts, int function,int mode){
 
 	threads = malloc(sizeof(pthread_t)*numThreads);
 
@@ -348,13 +367,13 @@ void createThreads(int numThreads,int numberOfAnts,int tmpNumOfAnts, int functio
 	for(i = 0; i < numThreads; i++){
 		tData = (TData*)malloc(sizeof(TData));
 		tData->id = i;
-		tData->numAnts = numberOfAnts > tmpNumOfAnts ? 10 : tmpNumOfAnts;
+		tData->numAnts = antsTotal > tmpNumOfAnts ? 10 : tmpNumOfAnts;
 		//printf("%d\n", tData->numAnts);
 		tData->function = function - 1;
 		tData->mode = mode;
 		//printf("%d\n", mode);
-		numberOfAnts -= 10;
-		printf("Creating thread %d\n", i);
+		antsTotal -= 10;
+		// printf("Creating thread %d\n", i);
 		rc = pthread_create(&threads[i], NULL, startPSO, (void*)tData);
 		if(rc){
 			printf("Error creating thread %d pthread_create got %d\n", i, rc);
@@ -371,7 +390,7 @@ int main(void){
 		exit(-1);
 	}	
 	
-	int i, rc, numberOfAnts, numThreads, tmpNumOfAnts, function, mode;
+	int i, rc, tmpNumOfAnts, function, mode;
 
 	bestG = (BestGlobal*)malloc(sizeof(BestGlobal));
 	bestG->value = 0;
@@ -380,7 +399,7 @@ int main(void){
 	bestG->coos->y = 0;
 	
 	printf("Cuantas hormigas quieres tener?\n");
-	scanf("%d", &numberOfAnts);		
+	scanf("%d", &antsTotal);		
 
 	printf("***Funciones***\n");
 	puts("1.- Sphere");
@@ -395,10 +414,10 @@ int main(void){
 	printf("Que modo quieres? (0 = min 1 = max)\n");
 	scanf("%d", &mode);
 		
-	tmpNumOfAnts = numberOfAnts % 10;	
-	numThreads = tmpNumOfAnts == 0 ? numberOfAnts / 10 : numberOfAnts / 10 + 1;	
+	tmpNumOfAnts = antsTotal % 10;	
+	numThreads = tmpNumOfAnts == 0 ? antsTotal / 10 : antsTotal / 10 + 1;	
 	
-	createThreads(numThreads,numberOfAnts,tmpNumOfAnts,function,mode);	
+	createThreads(numThreads,antsTotal,tmpNumOfAnts,function,mode);	
 	
 
 	for(i = 0; i < numThreads; i++){
