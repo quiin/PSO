@@ -231,11 +231,15 @@ void moveAnt(Point* vel, Ant* ant, int fun, int mode){
 	float newLocal = calFun(fun, ant);	
 	minOrMax(ant, fun, mode);
 	if(ant->bestLocal - newLocal < bestG->value - newLocal){
-		ant->cons1X -= .1;
-		ant->cons1Y -= .1;
+		if(ant->cons1X > MINCONSTANT){
+			ant->cons1X -= .1;
+			ant->cons1Y -= .1;
+		}		
 	}else{
-		ant->cons2X -= .1;
-		ant->cons2Y -= .1;
+		if(ant->cons2X > MINCONSTANT){
+			ant->cons2X -= .1;
+			ant->cons2Y -= .1;
+		}
 	}
 }
 
