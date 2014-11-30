@@ -5,7 +5,7 @@
 #include <semaphore.h>
 
 #define MAXDIMENSION 2
-#define RASTRIGINCONS 10
+#define RASTRIGIN_CONS 10
 #define PI 3.141592
 #define MAXITERATIONS 1
 #define MINCONSTANT 0.5
@@ -14,12 +14,13 @@
 #define MINRANGEX -500
 #define MINRANGEY -500
 #define RANDMAX 4294967296
+#define ANTS_PER_THREAD 50
 
 ///......................mode = 0 is min ................ mode = 1 is max
 pthread_t* threads;
 int sizeOfInt = sizeof(int);
 int numThreads,antsCreated =0,antsTotal;
-pthread_mutex_t creation_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t creation_mutex = PTHREAD_MUTEX_INITIALIZER, mt = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t condition_var = PTHREAD_COND_INITIALIZER;
 
 FILE* urandom;
@@ -107,10 +108,10 @@ float griewank(Ant* ant){
 }
 
 float rastrigin (Ant* ant){
-	int i, result = RASTRIGINCONS, coo;
+	int i, result = RASTRIGIN_CONS, coo;
 	for(i = 0; i < MAXDIMENSION; i++){	
 		coo = getCooDim(i, ant); 	
-		result += pow(coo, 2.0) - RASTRIGINCONS * cos(2 * PI * coo);
+		result += pow(coo, 2.0) - RASTRIGIN_CONS * cos(2 * PI * coo);
 	}
 	return result;
 }
@@ -302,12 +303,13 @@ void* startPSO(void* tData){
 
 	//init swarm with ants
 	Ant* swarm[numAnts];
-
+	pthread_mutex_lock(&mt);
 	for(i = 0; i < numAnts; i++){
 		// printf("Thread %d created ant %d of %d\n", id, i + 1, numAnts);
 		swarm[i] = initAnt(function);
 		antsCreated++;
-	}		
+	}
+	pthread_mutex_unlock(&mt);
 
 	//THREAD HAS TO WAIT FOR OTHER THREADS CREATING THEIR ANTS
 	//WE NEED TO SELECT GLOBALBEST THEN
@@ -317,7 +319,7 @@ void* startPSO(void* tData){
 		pthread_cond_wait(&condition_var,&creation_mutex);
 	}
 	if(antsCreated>=antsTotal-1){
-		printf("%d All ants created!\n",myData->id);
+		printf("All ants created!\n",myData->id);
 		pthread_cond_broadcast(&condition_var);
 	}
 	pthread_mutex_unlock(&creation_mutex);
@@ -367,12 +369,12 @@ void createThreads(int numThreads,int antsTotal,int tmpNumOfAnts, int function,i
 	for(i = 0; i < numThreads; i++){
 		tData = (TData*)malloc(sizeof(TData));
 		tData->id = i;
-		tData->numAnts = antsTotal > tmpNumOfAnts ? 10 : tmpNumOfAnts;
+		tData->numAnts = antsTotal > tmpNumOfAnts ? ANTS_PER_THREAD : tmpNumOfAnts;
 		//printf("%d\n", tData->numAnts);
 		tData->function = function - 1;
 		tData->mode = mode;
 		//printf("%d\n", mode);
-		antsTotal -= 10;
+		antsTotal -= ANTS_PER_THREAD;
 		// printf("Creating thread %d\n", i);
 		rc = pthread_create(&threads[i], NULL, startPSO, (void*)tData);
 		if(rc){
@@ -414,8 +416,8 @@ int main(void){
 	printf("Que modo quieres? (0 = min 1 = max)\n");
 	scanf("%d", &mode);
 		
-	tmpNumOfAnts = antsTotal % 10;	
-	numThreads = tmpNumOfAnts == 0 ? antsTotal / 10 : antsTotal / 10 + 1;	
+	tmpNumOfAnts = antsTotal % ANTS_PER_THREAD;	
+	numThreads = tmpNumOfAnts == 0 ? antsTotal / ANTS_PER_THREAD : antsTotal / ANTS_PER_THREAD + 1;	
 	
 	createThreads(numThreads,antsTotal,tmpNumOfAnts,function,mode);	
 	
