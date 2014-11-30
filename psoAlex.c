@@ -6,13 +6,13 @@
 #define MAXDIMENSION 2
 #define RASTRIGINCONS 10
 #define PI 3.141592
-#define MAXITERATIONS 1000
+#define MAXITERATIONS 100
 #define MINCONSTANT 0.5
 #define MAXRANGEX 500
 #define MAXRANGEY 500
 #define MINRANGEX -500
 #define MINRANGEY -500
-
+#define RANDMAX 4294967296
 
 ///......................mode = 0 is min ................ mode = 1 is max
 
@@ -173,7 +173,7 @@ Ant* initAnt(int fun){
 
 Point* calVelocity(Ant* ant){
 	int randomNum;
-	float localPart, globalPart;
+	long int localPart, globalPart;
 
 	//Randomizer
 	FILE* urandom = fopen("/dev/urandom","r");
@@ -185,57 +185,75 @@ Point* calVelocity(Ant* ant){
 	Point* vel = (Point*)malloc(sizeof(Point));
 
 	fread(&randomNum, sizeOfInt, 1, urandom);
-	localPart = ant->cons1X * randomNum * (ant->bestPosition->x - ant->position->x);
+	localPart = (long int)(ant->cons1X * (2 * (float)randomNum/(float)(RANDMAX)) * (ant->bestPosition->x - ant->position->x)) % RANDMAX;
 
 	fread(&randomNum, sizeOfInt, 1, urandom);
-	globalPart = ant->cons2X * randomNum * (bestG->coos->x - ant->position->x);
+	globalPart = (long int)(ant->cons2X * (2 * (float)randomNum/(float)(RANDMAX)) * (bestG->coos->x - ant->position->x)) % RANDMAX;
 
-	vel->x = ant->velocity->x + (localPart + globalPart) * .1;
-
-	fread(&randomNum, sizeOfInt, 1, urandom);
-	localPart = ant->cons1Y * randomNum * (ant->bestPosition->y - ant->position->y);
+	vel->x = (int)(ant->velocity->x + localPart + globalPart) % 10;
 
 	fread(&randomNum, sizeOfInt, 1, urandom);
-	globalPart = ant->cons2Y * randomNum * (bestG->coos->y - ant->position->y);
+	localPart = (long int)(ant->cons1Y * (2 * (float)randomNum/(float)(RANDMAX)) * (ant->bestPosition->y - ant->position->y)) % RANDMAX;
 
-	vel->y = ant->velocity->y + (localPart + globalPart) * .1;
+	fread(&randomNum, sizeOfInt, 1, urandom);
+	globalPart = (long int)(ant->cons2Y * (2 * (float)randomNum/(float)(RANDMAX)) * (bestG->coos->y - ant->position->y)) % RANDMAX;
+
+	vel->y = (int)(ant->velocity->y + localPart + globalPart) % 10;
+
+	//printf("vel->x=%d vel->y=%d\n", vel->x, vel->y);
 
 	close(urandom);
 
 	return vel;
 }
 
-void minOrMax(Ant* ant, int fun, int mode){
+void minOrMax(Ant** antP, int fun, int mode){
+
+	Ant* ant = *antP;
 	
 	float newLocal = calFun(fun, ant);	
 
-	if(mode = 0){
+	if(mode == 0){
 		if(ant->bestLocal > newLocal){
 			ant->bestLocal = newLocal;
 			ant->bestPosition->x = ant->position->x;
 			ant->bestPosition->y = ant->position->y;
+		}else{
+			ant->position->x = ant->bestPosition->x;
+			ant->position->y = ant->bestPosition->y;
 		}
 	}else{
 		if(ant->bestLocal < newLocal){
 			ant->bestLocal = newLocal;
 			ant->bestPosition->x = ant->position->x;
 			ant->bestPosition->y = ant->position->y;
+		}else{
+			ant->position->x = ant->bestPosition->x;
+			ant->position->y = ant->bestPosition->y;
 		}
 	}	
 }
 
-void moveAnt(Point* vel, Ant* ant, int fun, int mode){		
+void moveAnt(Point* vel, Ant** antP, int fun, int mode){			
+
+	Ant* ant = *antP;
 
 	if(ant->position->x + vel->x <= MAXRANGEX && ant->position->x + vel->x >= MINRANGEX)		
+		//printf("%d + %d\n", ant->position->x, vel->x);
 		ant->position->x += vel->x;
+		//printf("%d\n", ant->position->x);
 		
 	if(ant->position->y + vel->y <= MAXRANGEY && ant->position->y + vel->y >= MINRANGEY)		
+		//printf("%d + %d\n", ant->position->y, vel->y);
 		ant->position->y += vel->y;
+		//printf("%d\n", ant->position->y);
 		
+	
+	//printf("x=%d y=%d\n", ant->position->x,ant->position->y);
 
 	float newLocal = calFun(fun, ant);
 
-	minOrMax(ant, fun, mode);
+	minOrMax(antP, fun, mode);
 
 	if(ant->bestLocal - newLocal < bestG->value - newLocal){
 		ant->cons1X -= .1;
@@ -280,8 +298,6 @@ void* startPSO(void* tData){
 		swarm[i] = initAnt(function);
 	}	
 
-
-
 	//THREAD HAS TO WAIT FOR OTHER THREADS CREATING THEIR ANTS
 	//WE NEED TO SELECT GLOBALBEST THEN
 	for(i = 0; i < numAnts; i++){
@@ -294,11 +310,13 @@ void* startPSO(void* tData){
 	// }
 
 	for(i = 0; i < MAXITERATIONS; i++){		
-		for(j = 0; j < numAnts; j++){
-			printf("wut\n");
-			vel = calVelocity(swarm[j]);	
-			moveAnt(vel, swarm[i], function, mode);			
+		for(j = 0; j < numAnts; j++){			
+			vel = calVelocity(swarm[j]);
+			//printf("vel->x=%d vel->y=%d\n", vel->x, vel->y);	
+			moveAnt(vel, &(swarm[j]), function, mode);			
 		}		
+
+		printf("x=%d y=%d\n", swarm[0]->position->x, swarm[0]->position->y);
 
 		//THREAD HAS TO WAIT FOR OTHER THREADS MOVING THEIR ANTS
 		//WE NEED TO SELECT GLOBALBEST
