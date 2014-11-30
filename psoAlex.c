@@ -6,7 +6,7 @@
 #define MAXDIMENSION 2
 #define RASTRIGINCONS 10
 #define PI 3.141592
-#define MAXITERATIONS 100
+#define MAXITERATIONS 10000
 #define MINCONSTANT 0.5
 #define MAXRANGEX 500
 #define MAXRANGEY 500
@@ -17,6 +17,8 @@
 ///......................mode = 0 is min ................ mode = 1 is max
 
 int sizeOfInt = sizeof(int);
+
+FILE* urandom;
 
 typedef struct point{
 	int x;
@@ -132,11 +134,11 @@ Ant* initAnt(int fun){
 	int randomNum;
 
 	//Randomizer
-	FILE* urandom = fopen("/dev/urandom","r");
-	if(urandom == NULL){
-		printf("Can't open /dev/urandom !!!\n");
-		exit(-1);
-	}		
+	// FILE* urandom = fopen("/dev/urandom","r");
+	// if(urandom == NULL){
+	// 	printf("Can't open /dev/urandom !!!\n");
+	// 	exit(-1);
+	// }		
 
 	Ant* ant = (Ant*)malloc(sizeof(Ant));
 
@@ -176,11 +178,11 @@ Point* calVelocity(Ant* ant){
 	long int localPart, globalPart;
 
 	//Randomizer
-	FILE* urandom = fopen("/dev/urandom","r");
-	if(urandom == NULL){
-		printf("Can't open /dev/urandom !!!\n");
-		exit(-1);
-	}		
+	// FILE* urandom = fopen("/dev/urandom","r");
+	// if(urandom == NULL){
+	// 	printf("Can't open /dev/urandom !!!\n");
+	// 	exit(-1);
+	// }		
 
 	Point* vel = (Point*)malloc(sizeof(Point));
 
@@ -316,7 +318,9 @@ void* startPSO(void* tData){
 			moveAnt(vel, &(swarm[j]), function, mode);			
 		}		
 
-		printf("x=%d y=%d\n", swarm[0]->position->x, swarm[0]->position->y);
+		for(j = 0; j < numAnts; j++){
+			printf("Ant %d x=%d y=%d\n", j, swarm[j]->position->x, swarm[j]->position->y);
+		}		
 
 		//THREAD HAS TO WAIT FOR OTHER THREADS MOVING THEIR ANTS
 		//WE NEED TO SELECT GLOBALBEST
@@ -329,6 +333,12 @@ void* startPSO(void* tData){
 
 
 int main(void){
+
+	urandom = fopen("/dev/urandom","r");
+	if(urandom == NULL){
+		printf("Can't open /dev/urandom !!!\n");
+		exit(-1);
+	}	
 	
 	int i, rc, numberOfAnts, numThreads, tmpNumOfAnts, function, mode;
 
@@ -387,5 +397,8 @@ int main(void){
 			exit(-1);
 		}
 	}
+
+	close(urandom);
+
 	return 0;
 }
