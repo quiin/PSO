@@ -6,7 +6,7 @@
 #define MAXDIMENSION 2
 #define RASTRIGINCONS 10
 #define PI 3.141592
-#define MAXITERATIONS 10000
+#define MAXITERATIONS 1
 #define MINCONSTANT 0.5
 #define MAXRANGEX 500
 #define MAXRANGEY 500
@@ -15,7 +15,7 @@
 #define RANDMAX 4294967296
 
 ///......................mode = 0 is min ................ mode = 1 is max
-
+pthread_t* threads;
 int sizeOfInt = sizeof(int);
 
 FILE* urandom;
@@ -163,6 +163,8 @@ Ant* initAnt(int fun){
 
 	ant->bestLocal = calFun(fun, ant);
 
+
+
 	ant->cons1X = 2.0;
 	ant->cons1X = 2.0;
 	ant->cons1X = 2.0;
@@ -241,9 +243,9 @@ void moveAnt(Point* vel, Ant** antP, int fun, int mode){
 	Ant* ant = *antP;
 
 	if(ant->position->x + vel->x <= MAXRANGEX && ant->position->x + vel->x >= MINRANGEX)		
-		//printf("%d + %d\n", ant->position->x, vel->x);
+		printf("LAST %d + %d\n", ant->position->x, vel->x);
 		ant->position->x += vel->x;
-		//printf("%d\n", ant->position->x);
+		printf("NEW %d\n", ant->position->x);
 		
 	if(ant->position->y + vel->y <= MAXRANGEY && ant->position->y + vel->y >= MINRANGEY)		
 		//printf("%d + %d\n", ant->position->y, vel->y);
@@ -295,15 +297,19 @@ void* startPSO(void* tData){
 	Point* vel;
 
 	Ant* swarm[numAnts];
+	//init swarm with ants
 	for(i = 0; i < numAnts; i++){
 		printf("Thread %d created ant %d of %d\n", id, i + 1, numAnts);
 		swarm[i] = initAnt(function);
 	}	
 
+
 	//THREAD HAS TO WAIT FOR OTHER THREADS CREATING THEIR ANTS
 	//WE NEED TO SELECT GLOBALBEST THEN
 	for(i = 0; i < numAnts; i++){
+		// printf("Global was : %d at point (%d,%d)\n", bestG->value,bestG->coos->x,bestG->coos->y);
 		findGlobalBest(swarm[i], mode);
+		// printf("NEW GLOBAL IS : %d at point (%d,%d)\n", bestG->value,bestG->coos->x,bestG->coos->y);
 		//printf("%f\n", bestG->value);
 	}
 
@@ -319,7 +325,7 @@ void* startPSO(void* tData){
 		}		
 
 		for(j = 0; j < numAnts; j++){
-			printf("Ant %d x=%d y=%d\n", j, swarm[j]->position->x, swarm[j]->position->y);
+			// printf("Ant %d x=%d y=%d\n", j, swarm[j]->position->x, swarm[j]->position->y);
 		}		
 
 		//THREAD HAS TO WAIT FOR OTHER THREADS MOVING THEIR ANTS
@@ -331,6 +337,31 @@ void* startPSO(void* tData){
 	printf("finish\n");
 }
 
+void createThreads(int numThreads,int numberOfAnts,int tmpNumOfAnts, int function,int mode){
+
+	threads = malloc(sizeof(pthread_t)*numThreads);
+
+	int i,rc;
+
+	TData* tData;
+	
+	for(i = 0; i < numThreads; i++){
+		tData = (TData*)malloc(sizeof(TData));
+		tData->id = i;
+		tData->numAnts = numberOfAnts > tmpNumOfAnts ? 10 : tmpNumOfAnts;
+		//printf("%d\n", tData->numAnts);
+		tData->function = function - 1;
+		tData->mode = mode;
+		//printf("%d\n", mode);
+		numberOfAnts -= 10;
+		printf("Creating thread %d\n", i);
+		rc = pthread_create(&threads[i], NULL, startPSO, (void*)tData);
+		if(rc){
+			printf("Error creating thread %d pthread_create got %d\n", i, rc);
+			exit(-1);
+		}
+	}
+}
 
 int main(void){
 
@@ -365,30 +396,10 @@ int main(void){
 	scanf("%d", &mode);
 		
 	tmpNumOfAnts = numberOfAnts % 10;	
-	numThreads = tmpNumOfAnts == 0 ? numberOfAnts / 10 : numberOfAnts / 10 + 1;
-	pthread_t threads[numThreads];
-	TData* tData;
+	numThreads = tmpNumOfAnts == 0 ? numberOfAnts / 10 : numberOfAnts / 10 + 1;	
 	
-	for(i = 0; i < numThreads; i++){
-		tData = (TData*)malloc(sizeof(TData));
-		tData->id = i;
-		tData->numAnts = numberOfAnts > tmpNumOfAnts ? 10 : tmpNumOfAnts;
-		//printf("%d\n", tData->numAnts);
-		tData->function = function - 1;
-		tData->mode = mode;
-		//printf("%d\n", mode);
-		numberOfAnts -= 10;
-		printf("Creating thread %d\n", i);
-		rc = pthread_create(&threads[i], NULL, startPSO, (void*)tData);
-		if(rc){
-			printf("Error creating thread %d pthread_create got %d\n", i, rc);
-			exit(-1);
-		}
-	}
-
-	while(1){
-		wait();
-	}
+	createThreads(numThreads,numberOfAnts,tmpNumOfAnts,function,mode);	
+	
 
 	for(i = 0; i < numThreads; i++){
 		rc = pthread_join(threads[i], NULL);
