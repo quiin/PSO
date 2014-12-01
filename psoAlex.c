@@ -19,9 +19,10 @@
 ///......................mode = 0 is min ................ mode = 1 is max
 pthread_t* threads;
 int sizeOfInt = sizeof(int);
-int numThreads,antsCreated =0,antsTotal;
-pthread_mutex_t creation_mutex = PTHREAD_MUTEX_INITIALIZER, mt = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t condition_var = PTHREAD_COND_INITIALIZER;
+int numThreads,antsCreated =0,antsTotal,threadsReady=0;
+pthread_mutex_t creation_mutex = PTHREAD_MUTEX_INITIALIZER, mt = PTHREAD_MUTEX_INITIALIZER, vel_mutex= PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mt2 = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t condition_var = PTHREAD_COND_INITIALIZER, ready = PTHREAD_COND_INITIALIZER;
 sem_t findGlobalBestMutex;
 
 FILE* urandom;
@@ -81,7 +82,7 @@ float rosenbrock(Ant* ant){
 	float result = 0.0;
 	for(i = 0; i < MAXDIMENSION - 1; i++){	
 		coo = getCooDim(i, ant); 	
-		result += 100 * ( getCooDim(i + 1, ant) - pow((float)coo, 2.0)) + pow((float)(coo - 1), 2.0);
+		result += 100 * pow((getCooDim(i+ 1, ant) - pow((float)coo, 2.0)), 2.0) + pow((float)(1-coo), 2.0);
 	}
 	return result;
 }
@@ -304,44 +305,52 @@ void* startPSO(void* tData){
 
 	//init swarm
 	Ant* swarm[numAnts];
-/***START create ants and wait for all ants to be created***/
+	/***START create ants and wait for all ants to be created***/
+	
 	//lock ant creation for other threads
 	pthread_mutex_lock(&mt);
-	for(i = 0; i < numAnts; i++){
-		// printf("Thread %d created ant %d of %d\n", id, i + 1, numAnts);
+	for(i = 0; i < numAnts; i++){		
 		swarm[i] = initAnt(function);
 		antsCreated++;
 	}
-	//unblock ant creation for other threads
+
+	//unllock ant creation for other threads
 	pthread_mutex_unlock(&mt);
 	
 	//wait for all ants to be created
-	while(antsCreated<antsTotal){
-		// printf("Thread %d is waiting. Current ants: %d/%d\n", myData->id,antsCreated,antsTotal);
+	while(antsCreated<antsTotal){				
 		pthread_cond_wait(&condition_var,&creation_mutex);
 	}
+
 	//all ants created -> wake all waiting threads
-	if(antsCreated>=antsTotal-1){
-		// printf("All ants created!\n",myData->id);
+	if(antsCreated>=antsTotal-1){			
 		pthread_cond_broadcast(&condition_var);
 	}
 	pthread_mutex_unlock(&creation_mutex);	
-/*****END create ants and wait for all ants to be created*****/
+	
+	/*****END create ants and wait for all ants to be created*****/
 
+	//lock Global best access for other threads
+	pthread_mutex_lock(&mt2);	
+	for(i = 0; i < numAnts; i++){		
+		sem_wait(&findGlobalBestMutex); //enter and block access		
+		findGlobalBest(swarm[i], mode); //critical		
+		sem_post(&findGlobalBestMutex); //leave and realese access		
+	}
+	threadsReady++;	
+	pthread_mutex_unlock(&mt2);
 
-	for(i = 0; i < numAnts; i++){
-		//Control critical section access
-		sem_wait(&findGlobalBestMutex); //enter and block access
-		// printf("Thread %d on iterarion %d is ENTERING CS\n", myData->id,i);
-		findGlobalBest(swarm[i], mode); //critical
-		sem_post(&findGlobalBestMutex); //leave and realese access
-		// printf("Thread %d on iterarion %d is LEAVING CS\n", myData->id,i);
+	//wait for all threads to find global
+	while(threadsReady<numThreads){	
+		pthread_cond_wait(&ready,&vel_mutex);
 	}
 
-	// while(1){
-	// 	sleep(1);
-	// }
-
+	//all threads are ready -> wake threads
+	if(threadsReady>= numThreads){		
+		pthread_cond_broadcast(&ready);		
+	}
+	pthread_mutex_unlock(&vel_mutex);
+		
 	for(i = 0; i < MAXITERATIONS; i++){		
 		for(j = 0; j < numAnts; j++){			
 			vel = calVelocity(swarm[j]);
