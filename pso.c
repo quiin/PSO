@@ -295,7 +295,7 @@ int* checkConsole(int argc, char* argv[]){
 	}
 	int* choices = (int*)malloc(sizeOfInt*3);
 	int fun = atoi(argv[2]);
-	if (fun != 1 || fun != 2 || fun!= 3 || fun!=4 || fun!=5){
+	if (fun != 1 && fun != 2 && fun!= 3 && fun!=4 && fun!=5){
 		printBadUsage();
 	}
 	int ants = atoi(argv[3]);
