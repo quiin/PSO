@@ -314,6 +314,17 @@ void* startPSO(void* tData){
 		antsCreated++;
 	}
 
+	//init bestG
+	if(bestG==NULL){
+		bestG = (BestGlobal*)malloc(sizeof(BestGlobal));	
+		bestG->coos = (Point*)malloc(sizeof(Point));
+		Ant* tmp = swarm[0];
+		bestG->value = calFun(myData->function,tmp);
+		bestG->coos->x = tmp->position->x;
+		bestG->coos->y = tmp->position->y;
+
+	}
+
 	//unllock ant creation for other threads
 	pthread_mutex_unlock(&mt);
 	
@@ -406,11 +417,7 @@ int main(void){
 	
 	int i, rc, tmpNumOfAnts, function, mode;
 
-	bestG = (BestGlobal*)malloc(sizeof(BestGlobal));
-	bestG->value = 0;
-	bestG->coos = (Point*)malloc(sizeof(Point));
-	bestG->coos->x = 0;
-	bestG->coos->y = 0;
+	bestG = NULL;	
 	
 	printf("Cuantas hormigas quieres tener?\n");
 	scanf("%d", &antsTotal);		
@@ -444,7 +451,7 @@ int main(void){
 			exit(-1);
 		}
 	}
-
+	printf("bestG value: %f in (%d,%d)\n", bestG->value,bestG->coos->x,bestG->coos->y);
 	close(urandom);
 
 	return 0;
