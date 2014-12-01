@@ -1,4 +1,4 @@
-Particule Swarm Optimization
+Particle Swarm Optimization
 
 - Alex Rojas
 - Carlos Reyna

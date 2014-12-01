@@ -1,0 +1,19 @@
+#ifndef	__DEFINES_H__
+#define __DEFINES_H__
+
+
+
+#define MAXDIMENSION 2
+#define RASTRIGIN_CONS 10
+#define PI 3.141592
+#define MAXITERATIONS 10000
+#define MINCONSTANT 0.5
+#define MAXRANGEX 500
+#define MAXRANGEY 500
+#define MINRANGEX -500
+#define MINRANGEY -500
+#define RANDMAX 4294967296
+#define ANTS_PER_THREAD 50
+
+
+#endif
