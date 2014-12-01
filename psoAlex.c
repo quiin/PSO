@@ -11,8 +11,6 @@
 
 
 
-///......................mode = 0 is min ................ mode = 1 is max
-
 /* GLOBAL VARIABLES */
 pthread_t* threads;
 int sizeOfInt = sizeof(int);
@@ -31,35 +29,37 @@ void* startPSO(void* tData);
 void calVelocity(Ant** antP);
 void moveAnt(Ant** antP, int fun, int mode);
 void findGlobalBest(Ant* ant, int mode);
+int* checkConsole(int argc, char* argv[]);
+void printBadUsage();
 
 
-int main(void){
-
+int main(int argc, char* argv[]){
+	
+	//read file
 	urandom = fopen("/dev/urandom","r");
 	if(urandom == NULL){
 		printf("Can't open /dev/urandom !!!\n");
 		exit(-1);
 	}	
-	
+	//choices[0] = function
+	//choices[1] = mode
+	//choices[2] = totalAnts
+	int* choices = checkConsole(argc, argv);
 	int i, rc, tmpNumOfAnts, function, mode;
-
-	bestG = NULL;	
+	bestG = NULL;
+	function = choices[0];
+	mode = choices[1];
+	antsTotal = choices[2];
 	
-	printf("Cuantas hormigas quieres tener?\n");
+	/*printf("Cuantas hormigas quieres tener?\n");
 	scanf("%d", &antsTotal);		
-
-	printf("***Funciones***\n");
-	puts("1.- Sphere");
-	puts("2.- Rosenbrock");
-	puts("3.- Schwefel");
-	puts("4.- Griewank");
-	puts("5.- Rastrigin");
+	
 
 	printf("Que funcion quieres?\n");
 	scanf("%d", &function);
 
 	printf("Que modo quieres? (0 = min 1 = max)\n");
-	scanf("%d", &mode);
+	scanf("%d", &mode);*/
 		
 	//init semaphore	
 	sem_init(&findGlobalBestMutex,0,1);	
@@ -287,4 +287,44 @@ void findGlobalBest(Ant* ant, int mode){
 			bestG->coos->y = ant->bestPosition->y;
 		}
 	}	
+}
+
+int* checkConsole(int argc, char* argv[]){	
+	if(argc!=4){
+		printBadUsage();
+	}
+	int* choices = (int*)malloc(sizeOfInt*3);
+	int fun = atoi(argv[2]);
+	if (fun != 1 || fun != 2 || fun!= 3 || fun!=4 || fun!=5){
+		printBadUsage();
+	}
+	int ants = atoi(argv[3]);
+	int mode;
+	if (strcmp(argv[1],"min")==0){
+		mode = 0;		
+	}else{
+		if (strcmp(argv[1],"max")==0){
+		mode = 1;
+		}else{
+			printBadUsage();
+		}
+	}
+	choices[0] = fun;
+	choices[1] = mode;
+	choices[2] = ants;
+	return choices;
+	
+}
+
+void printBadUsage(){
+	printf("\n ******  Wrong usage  *****\n");
+	printf("#\t Function \n\n");
+	puts("1\t Sphere");
+	puts("2\t Rosenbrock");
+	puts("3\t Schwefel");
+	puts("4\t Griewank");
+	puts("5\t Rastrigin");
+	printf("\nusage: ./pso min/max #function #ants\n\n");
+	printf("Example: ./a.out max 3 325\n");
+	exit(-1);
 }
