@@ -199,7 +199,7 @@ void calVelocity(Ant** antP){
 
 	ant->velocity->y = (int)(ant->velocity->y + localPart + globalPart) % 10;
 
-	printf("vel->x=%d vel->y=%d\n", ant->velocity->x, ant->velocity->y);
+	//printf("vel->x=%d vel->y=%d\n", ant->velocity->x, ant->velocity->y);
 
 	close(urandom);
 }
@@ -235,7 +235,7 @@ void moveAnt(Ant** antP, int fun, int mode){
 
 	Ant* ant = *antP;
 
-	printf("x=%d y=%d\n", ant->position->x, ant->position->y );
+	//printf("x=%d y=%d\n", ant->position->x, ant->position->y );
 	//printf("vx=%d vy=%d\n", ant->velocity->x, ant->velocity->y);
 
 	if(ant->position->x + ant->velocity->x <= MAXRANGEX && ant->position->x + ant->velocity->x >= MINRANGEX)		
